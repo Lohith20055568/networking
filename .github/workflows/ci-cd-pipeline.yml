@@ -10,47 +10,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./Dockerfile  # Ensure Dockerfile is in the root directory
-        push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile  # Ensure Dockerfile exists
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/myapp:latest
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
 
     steps:
-    - name: Deploy to AWS EC2
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.AWS_EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.AWS_PRIVATE_KEY }}
-        script: |
-          echo "Pulling latest Docker image..."
-          docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
-          
-          echo "Stopping and removing existing container..."
-          docker stop myapp || true
-          docker rm myapp || true
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_PRIVATE_KEY }}
+          script: |
+            echo "Pulling latest Docker image..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+            
+            echo "Stopping and removing existing container..."
+            docker stop myapp || true
+            docker rm myapp || true
 
-          echo "Freeing up port 80..."
-          sudo fuser -k 80/tcp || true  # Kills any process using port 80
+            echo "Killing any process using port 80..."
+            sudo fuser -k 80/tcp || true  # This will fix the port issue
 
-          echo "Running new container..."
-          docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+            echo "Removing any old Docker network conflicts..."
+            docker network prune -f
+
+            echo "Running new container..."
+            docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
