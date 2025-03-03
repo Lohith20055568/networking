@@ -42,18 +42,19 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_PRIVATE_KEY }}
           script: |
-            echo "Pulling latest Docker image..."
-            docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+            script: |
+               echo "Pulling latest Docker image..."
+               docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+  
+              echo "Stopping and removing existing container..."
+              docker stop myapp || true
+              docker rm myapp || true
             
-            echo "Stopping and removing existing container..."
-            docker stop myapp || true
-            docker rm myapp || true
-
-            echo "Killing any process using port 80..."
-            sudo fuser -k 80/tcp || true  # This will fix the port issue
-
-            echo "Removing any old Docker network conflicts..."
-            docker network prune -f
-
-            echo "Running new container..."
-            docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+              echo "Force stopping any process using port 80..."
+              sudo lsof -t -i:80 | xargs sudo kill -9 || true
+            
+              echo "Removing any old Docker network conflicts..."
+              docker network prune -f
+            
+              echo "Running new container..."
+              docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
