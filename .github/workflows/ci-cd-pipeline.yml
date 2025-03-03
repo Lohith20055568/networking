@@ -34,23 +34,22 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
 
-    steps:
-    - name: Deploy to AWS EC2
+       - name: Deploy to AWS EC2
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.AWS_EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.AWS_PRIVATE_KEY }}
         script: |
-          echo "Logging into Docker Hub..."
-          sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          
           echo "Pulling latest Docker image..."
-          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
           
           echo "Stopping and removing existing container..."
-          sudo docker stop myapp || true
-          sudo docker rm myapp || true
-          
+          docker stop myapp || true
+          docker rm myapp || true
+
+          echo "Freeing up port 80..."
+          sudo fuser -k 80/tcp || true  # Kills any process using port 80
+
           echo "Running new container..."
-          sudo docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+          docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
