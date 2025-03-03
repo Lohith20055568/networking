@@ -26,7 +26,7 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         context: .  # Change if Dockerfile is inside a folder
-        file: ./Dockerfile  # Ensure Dockerfile exists
+  
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/myapp:latest
 
