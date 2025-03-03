@@ -25,16 +25,16 @@ jobs:
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v4
       with:
-        context: .  # Change if Dockerfile is inside a folder
-  
+        context: .
+        
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/myapp:latest
 
   deploy:
-  runs-on: ubuntu-latest
-  needs: build
+    runs-on: ubuntu-latest
+    needs: build
 
-  steps:
+    steps:
     - name: Deploy to AWS EC2
       uses: appleboy/ssh-action@master
       with:
@@ -42,9 +42,15 @@ jobs:
         username: ubuntu
         key: ${{ secrets.AWS_PRIVATE_KEY }}
         script: |
+          echo "Logging into Docker Hub..."
           sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          sudo docker pull l0hith/myapp:latest
+          
+          echo "Pulling latest Docker image..."
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+          
+          echo "Stopping and removing existing container..."
           sudo docker stop myapp || true
           sudo docker rm myapp || true
-          sudo docker run -d --name myapp -p 80:80 l0hith/myapp:latest
-
+          
+          echo "Running new container..."
+          sudo docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
